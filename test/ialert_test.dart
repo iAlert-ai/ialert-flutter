@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ialert/ialert.dart';
+import 'package:ialert_flutter/ialert_flutter.dart';
 
 import 'helpers.dart';
 

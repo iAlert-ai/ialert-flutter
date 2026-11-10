@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ialert/ialert.dart';
+import 'package:ialert_flutter/ialert_flutter.dart';
 
 class FakeSocket implements IAlertSocket {
   FakeSocket(this.uri);
