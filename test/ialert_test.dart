@@ -198,4 +198,70 @@ void main() {
     await expectLater(a.setTags({'a': 1}), throwsA(predicate((e) => e is IAlertException && e.status == 401)));
     expect(await a.deviceId, isNull);
   });
+
+  test('android devices join and leave a live activity channel with their device token', () async {
+    final a = make(autoConnect: false);
+    await a.register(pushToken: 'fcm-token-1');
+    await a.subscribeLiveActivity('01J0CHANNEL');
+    await a.unsubscribeLiveActivity('01J0CHANNEL');
+
+    final join = api.where('POST', '/live-activity-channels/01J0CHANNEL').single;
+    final leave = api.where('DELETE', '/live-activity-channels/01J0CHANNEL').single;
+    expect(join.url.toString(), 'https://api.test/api/v1/devices/dev_1/live-activity-channels/01J0CHANNEL');
+    expect(join.headers['X-Device-Token'], 'ia_dt_test');
+    expect(leave.headers['X-Device-Token'], 'ia_dt_test');
+  });
+
+  test('live activity subscription: ios is refused locally, api errors surface', () async {
+    final ios = make(platform: 'ios', autoConnect: false);
+    await expectLater(ios.subscribeLiveActivity('c'),
+        throwsA(isA<IAlertException>().having((e) => e.code, 'code', 'platform_not_supported')));
+
+    final a = make(autoConnect: false);
+    await expectLater(a.subscribeLiveActivity('c'), throwsA(isA<IAlertException>()));
+
+    await a.register();
+    api.override = (req) => req.url.path.contains('/live-activity-channels/')
+        ? (status: 422, body: {'message': 'Register with the FCM token.', 'code': 'push_token_required'})
+        : null;
+    await expectLater(a.subscribeLiveActivity('c'),
+        throwsA(isA<IAlertException>().having((e) => e.code, 'code', 'push_token_required')));
+  });
+
+  test('reads live activity updates from fcm data and ignores other messages', () {
+    final update = LiveActivityUpdate.fromData({
+      'ialert_type': 'live_activity',
+      'ialert_channel': '01J0CHANNEL',
+      'ialert_broadcast': '01J0BROADCAST',
+      'event': 'update',
+      'timestamp': '1700000000',
+      'content_state': '{"home":2,"away":1}',
+      'title': 'Goal!',
+      'relevance_score': '0.5',
+    })!;
+
+    expect(update.channelId, '01J0CHANNEL');
+    expect(update.event, LiveActivityEvent.update);
+    expect(update.contentState['home'], 2);
+    expect(update.title, 'Goal!');
+    expect(update.timestamp, 1700000000);
+    expect(update.relevanceScore, 0.5);
+    expect(update.isEnd, isFalse);
+    expect(update.notificationId, isNonNegative);
+
+    expect(LiveActivityUpdate.fromData({'ialert_type': 'live_activity', 'ialert_channel': 'c', 'event': 'end'})!.isEnd, isTrue);
+    expect(LiveActivityUpdate.fromData({'ialert_id': '01J0NOTIFICATION'}), isNull);
+    expect(LiveActivityUpdate.fromData({'ialert_type': 'live_activity', 'ialert_channel': 'c', 'event': 'start'}), isNull);
+  });
+
+  test('an unknown channel does not cost the device its registration', () async {
+    final a = make(autoConnect: false);
+    await a.register(pushToken: 'fcm-token-1');
+    api.override = (req) => req.url.path.contains('/live-activity-channels/')
+        ? (status: 404, body: {'message': 'Not found.', 'code': 'not_found'})
+        : null;
+
+    await expectLater(a.subscribeLiveActivity('missing'), throwsA(isA<IAlertException>().having((e) => e.status, 'status', 404)));
+    expect(await a.deviceId, 'dev_1');
+  });
 }

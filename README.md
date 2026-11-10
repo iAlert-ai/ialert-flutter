@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.1.0).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.2.0).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,7 +8,7 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.1.0
+  ialert_flutter: ^0.2.0
 ```
 
 ## Usage
@@ -42,6 +42,28 @@ What it does:
 - `delivered` is acked automatically (`autoAckDelivered: false` to turn off). Acks go over the socket when it is ready, otherwise over HTTP.
 - Answers Gateway pings, pings every 30 s, reconnects with jittered backoff (1–60 s). On `device_token_invalid` / `auth_required` it stops and forgets the registration; call `register()` again.
 
+## Live Activity broadcasts
+
+One push from your server updates a live notification on every subscribed device (scores, deliveries, flights). Your server creates the channel with `POST /v1/live-activity-channels` and gives its `id` to the app.
+
+**Android** joins through iAlert, with the FCM token from `firebase_messaging`:
+
+```dart
+await ialert.register(pushToken: await FirebaseMessaging.instance.getToken());
+await ialert.subscribeLiveActivity(channelId); // and unsubscribeLiveActivity(channelId)
+
+FirebaseMessaging.onMessage.listen((message) {
+  final update = LiveActivityUpdate.fromData(message.data);
+  if (update == null) return; // not a Live Activity update
+  // show or update one ongoing notification with id update.notificationId,
+  // and remove it when update.isEnd (e.g. with flutter_local_notifications)
+});
+```
+
+Subscribe again when FCM issues a new token (`onTokenRefresh`).
+
+**iOS** subscribes the Live Activity itself with ActivityKit in native Swift code, using the channel's `channel_id`: `Activity.request(attributes:content:pushType: .channel(channelId))`. `subscribeLiveActivity` throws `platform_not_supported` on iOS.
+
 ## Testing / injection
 
 `storage` (`KeyValueStorage`, default `shared_preferences`; `MemoryStorage` included),
@@ -54,7 +76,7 @@ flutter analyze && flutter test
 
 ## Next
 
-Native FCM (Android) and APNs (iOS) integration is not in 0.1.0: get the token with
+Native FCM (Android) and APNs (iOS) integration is not in 0.2.0: get the token with
 your own plugin (e.g. `firebase_messaging`) and pass it as `pushToken`. Without it the
 device only receives messages while the app runs (Gateway) or on next launch (Inbox).
 

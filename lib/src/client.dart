@@ -11,7 +11,7 @@ import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.1.0';
+const String sdkVersion = '0.2.0';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
@@ -140,6 +140,25 @@ class IAlert {
   Future<Device> setTags(Map<String, Object?> tags) => update(tags: tags);
 
   Future<Device> setExternalUserId(String? externalUserId) => update(externalUserId: externalUserId);
+
+  /// Join a Live Activity channel so its broadcasts reach this Android device as
+  /// FCM data messages (read them with [LiveActivityUpdate.fromData]). Register
+  /// with the FCM token as `pushToken` first, and subscribe again after it changes.
+  /// On iOS, subscribe the Live Activity itself with ActivityKit instead.
+  Future<void> subscribeLiveActivity(String channelId) => _liveActivity(channelId, subscribe: true);
+
+  /// Leave a Live Activity channel (Android).
+  Future<void> unsubscribeLiveActivity(String channelId) => _liveActivity(channelId, subscribe: false);
+
+  Future<void> _liveActivity(String channelId, {required bool subscribe}) async {
+    if (_platform == 'ios') {
+      throw IAlertException(0, 'platform_not_supported',
+          'On iOS, subscribe the Live Activity with ActivityKit: Activity.request(..., pushType: .channel(channelId)).');
+    }
+    final r = await _requireRegistration();
+    await _withToken(() => _api.liveActivity(r.deviceId, r.deviceToken, channelId, subscribe: subscribe),
+        forgetOnNotFound: false);
+  }
 
   /// Stop receiving notifications; call [register] to subscribe again.
   Future<Device> unsubscribe() async {
@@ -300,11 +319,13 @@ class IAlert {
   }
 
   /// A rejected device token means the device was deleted or unsubscribed elsewhere.
-  Future<T> _withToken<T>(Future<T> Function() call) async {
+  /// A rejected device token means the device was deleted elsewhere; a 404 means the
+  /// same unless the path also names another resource (a channel: [forgetOnNotFound] false).
+  Future<T> _withToken<T>(Future<T> Function() call, {bool forgetOnNotFound = true}) async {
     try {
       return await call();
     } on IAlertException catch (e) {
-      if (e.code == 'device_token_invalid' || e.status == 404) {
+      if (e.code == 'device_token_invalid' || (forgetOnNotFound && e.status == 404)) {
         disconnect();
         await _forget();
       }

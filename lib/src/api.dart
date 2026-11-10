@@ -52,6 +52,13 @@ class ApiClient {
     return acknowledged;
   }
 
+  /// Join or leave a Live Activity channel (its FCM topic).
+  Future<void> liveActivity(String id, String token, String channelId, {required bool subscribe}) async {
+    await _request(subscribe ? 'POST' : 'DELETE',
+        '/devices/${Uri.encodeComponent(id)}/live-activity-channels/${Uri.encodeComponent(channelId)}',
+        token: token);
+  }
+
   Future<Map<String, dynamic>> _request(String method, String pathOrUrl,
       {Map<String, dynamic>? body, String? token}) async {
     final headers = {
