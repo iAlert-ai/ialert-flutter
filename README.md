@@ -57,3 +57,9 @@ flutter analyze && flutter test
 Native FCM (Android) and APNs (iOS) integration is not in 0.1.0: get the token with
 your own plugin (e.g. `firebase_messaging`) and pass it as `pushToken`. Without it the
 device only receives messages while the app runs (Gateway) or on next launch (Inbox).
+
+## License
+
+Copyright 2026 iAlert.ir
+
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE).
