@@ -185,6 +185,9 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
 
         for entry in entries.reversed() {
             guard let entryId = entry["id"] as? String, entry["delivered_at"] is NSNull || entry["delivered_at"] == nil else { continue }
+            // APNs already showed pushed entries; leave them unacknowledged so a sync after
+            // the platform switched to the internal network still shows them.
+            if entry["pushed"] as? Bool == true { continue }
             delivered.append(entryId)
             guard !showing.contains(entryId), !shown.contains(entryId) else { continue }
 

@@ -2,6 +2,7 @@
 
 ## 0.5.0
 
+- iOS background sync skips `pushed` entries (APNs showed them) and leaves them unacknowledged, so they are shown once the platform switches to its internal network.
 - Now a Flutter plugin with its own native code: `IAlert.init()` sets everything up without `firebase_messaging` or AppDelegate code.
 - iOS: permission, APNs token, foreground display, taps (opens `data.url`) and background Inbox sync as local notifications when `<bundle id>.ialert-sync` is permitted.
 - Custom notification sounds in background-sync notifications on iOS (`none` is silent).
