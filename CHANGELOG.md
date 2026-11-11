@@ -5,8 +5,9 @@
 - Now a Flutter plugin with its own native code: `IAlert.init()` sets everything up without `firebase_messaging` or AppDelegate code.
 - iOS: permission, APNs token, foreground display, taps (opens `data.url`) and background Inbox sync as local notifications when `<bundle id>.ialert-sync` is permitted.
 - Custom notification sounds in background-sync notifications on iOS (`none` is silent).
-- Android, on the iAlert Android SDK 0.5.0: FCM token without Firebase setup (iAlert's shared project or the app's own), notifications with image and custom sound, taps (open `data.url`), background sync every 15 minutes for messages FCM could not deliver, and Live Activity broadcasts as ongoing notifications. `minSdk` 23.
+- Android, on the iAlert Android SDK 0.5.0: FCM token of the app's own Firebase project, whose service account and `google-services.json` are uploaded in the iAlert panel (no Firebase setup in the app), notifications with image and custom sound, taps (open `data.url`), background sync every 15 minutes for messages FCM could not deliver, and Live Activity broadcasts as ongoing notifications. `minSdk` 23.
 - `IAlert.publicKey` and `IAlert.apiUrl` getters.
+- Migrated to Flutter's built-in Kotlin; needs Flutter 3.44 / Dart 3.12 or later.
 
 ## 0.4.0
 

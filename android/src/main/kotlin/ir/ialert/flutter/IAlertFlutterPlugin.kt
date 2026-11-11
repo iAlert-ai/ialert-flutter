@@ -7,8 +7,9 @@ import io.flutter.plugin.common.MethodChannel
 import ir.ialert.sdk.IAlertBridge
 
 /**
- * Android side of ialert_flutter, on the iAlert Android SDK: the FCM token (iAlert's shared
- * Firebase project unless the app uploaded its own service account, so no Firebase setup),
+ * Android side of ialert_flutter, on the iAlert Android SDK: the FCM token of the app's own
+ * Firebase project (its service account and google-services.json are in the iAlert panel, so
+ * no Firebase setup in the app),
  * notification channels and display, taps (opening `data.url`), and the WorkManager sync that
  * shows Inbox messages while FCM is unreachable. The Dart client registers the device and
  * runs the Gateway.
