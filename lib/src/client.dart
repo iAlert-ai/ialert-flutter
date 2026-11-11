@@ -77,6 +77,12 @@ class IAlert {
 
   final String _apiUrl;
   final String _publicKey;
+
+  /// The app's public key (`ia_pk_…`).
+  String get publicKey => _publicKey;
+
+  /// Base URL of the iAlert API.
+  String get apiUrl => _apiUrl;
   final Uri _gatewayUrl;
 
   /// Told about every registration, so native background sync can read the Inbox.

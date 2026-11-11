@@ -51,7 +51,8 @@ class NativePush {
     ialert.ready = () async {
       try {
         if (requestPermission) await channel.invokeMethod<bool>('requestPermission');
-        token = await channel.invokeMethod<String>('getToken');
+        token = await channel.invokeMethod<String>(
+            'getToken', {'publicKey': ialert.publicKey, 'apiUrl': ialert.apiUrl});
       } on MissingPluginException {
         // tests or an unsupported platform: Gateway and Inbox only
       } on PlatformException {

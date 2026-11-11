@@ -31,7 +31,7 @@ void main() {
 
 **Custom sound:** put the sound file in the app (iOS: add `order.caf` to the Runner target; Android: `res/raw/order.mp3`) and send with `"sound": "order.caf"`. `"sound": "none"` is silent.
 
-**Android:** native push (FCM through iAlert's own Firebase project, nothing to configure) and the background sync are coming in the next release; until then Android devices receive messages over the Gateway while the app runs and from the Inbox on the next launch.
+**Android:** nothing to configure. The plugin uses the iAlert Android SDK: an FCM token from iAlert's shared Firebase project (or your own, once you upload its service account in the panel), so no `google-services.json` or Firebase plugin; notifications with images and custom sounds; taps open `data.url`; and a background sync every 15 minutes shows messages that could not be pushed while FCM is unreachable. The app's `minSdk` must be 23 or later.
 
 ## Usage (manual)
 
@@ -68,21 +68,14 @@ What it does:
 
 One push from your server updates a live notification on every subscribed device (scores, deliveries, flights). Your server creates the channel with `POST /v1/live-activity-channels` and gives its `id` to the app.
 
-**Android** joins through iAlert, with the FCM token from `firebase_messaging`:
+**Android** joins through iAlert once `IAlert.init` has registered the device with its FCM token:
 
 ```dart
-await ialert.register(pushToken: await FirebaseMessaging.instance.getToken());
+await ialert.ready;
 await ialert.subscribeLiveActivity(channelId); // and unsubscribeLiveActivity(channelId)
-
-FirebaseMessaging.onMessage.listen((message) {
-  final update = LiveActivityUpdate.fromData(message.data);
-  if (update == null) return; // not a Live Activity update
-  // show or update one ongoing notification with id update.notificationId,
-  // and remove it when update.isEnd (e.g. with flutter_local_notifications)
-});
 ```
 
-Subscribe again when FCM issues a new token (`onTokenRefresh`).
+The plugin shows each channel as one ongoing notification, updated in place and removed when the broadcast ends. (Using `firebase_messaging` yourself instead, `LiveActivityUpdate.fromData(message.data)` reads a broadcast.)
 
 **iOS** subscribes the Live Activity itself with ActivityKit in native Swift code, using the channel's `channel_id`: `Activity.request(attributes:content:pushType: .channel(channelId))`. `subscribeLiveActivity` throws `platform_not_supported` on iOS.
 
