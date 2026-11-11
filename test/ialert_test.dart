@@ -264,4 +264,29 @@ void main() {
     await expectLater(a.subscribeLiveActivity('missing'), throwsA(isA<IAlertException>().having((e) => e.status, 'status', 404)));
     expect(await a.deviceId, 'dev_1');
   });
+
+  test('native pushes from FCM and APNs are delivered once and taps acked as clicked', () async {
+    final a = make(autoConnect: false);
+    await a.register(pushToken: 'fcm-token-1');
+    final received = <IAlertMessage>[];
+    a.messages.listen(received.add);
+
+    final fcm = await a.didReceivePush({'ialert_id': '01FCM', 'order': '42'}, title: 'Order', body: 'On the way');
+    expect(fcm?.source, MessageSource.push);
+    expect(fcm?.data, {'order': '42'});
+    expect(await a.didReceivePush({'ialert_id': '01FCM'}), isNull, reason: 'deduplicated');
+
+    final apns = await a.didReceivePush({'ialert': {'id': '01APNS', 'image': 'https://cdn.test/a.jpg', 'data': {'k': 'v'}}});
+    expect(apns?.image, 'https://cdn.test/a.jpg');
+    expect(apns?.data, {'k': 'v'});
+    expect(await a.didReceivePush({'other': 'push'}), isNull);
+
+    await a.didOpenPush({'ialert_id': '01FCM'});
+    await Future<void>.delayed(const Duration(milliseconds: 20));
+
+    expect(received.map((m) => m.id), ['01FCM', '01APNS']);
+    final events = api.where('POST', '/inbox/ack').map((r) => r.body!['event']).toList();
+    expect(events, containsAll(['delivered', 'clicked']));
+  });
 }
+

@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.2.0).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.3.0).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,7 +8,7 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.2.0
+  ialert_flutter: ^0.3.0
 ```
 
 ## Usage
@@ -74,11 +74,28 @@ are all constructor parameters. See `test/helpers.dart` for fakes.
 flutter analyze && flutter test
 ```
 
-## Next
+## Native push (notifications while the app is closed)
 
-Native FCM (Android) and APNs (iOS) integration is not in 0.2.0: get the token with
-your own plugin (e.g. `firebase_messaging`) and pass it as `pushToken`. Without it the
-device only receives messages while the app runs (Gateway) or on next launch (Inbox).
+Use `firebase_messaging` for the native side and give iAlert the token it needs: the **FCM token on Android** and the **APNs token on iOS** (iAlert sends to APNs directly with your `.p8`).
+
+```dart
+final messaging = FirebaseMessaging.instance;
+await messaging.requestPermission();
+
+final token = Platform.isIOS ? await messaging.getAPNSToken() : await messaging.getToken();
+await ialert.register(pushToken: token, externalUserId: 'user-42');
+messaging.onTokenRefresh.listen((_) async => ialert.register(
+    pushToken: Platform.isIOS ? await messaging.getAPNSToken() : await messaging.getToken()));
+
+// While the app is open: deduplicated against the Gateway and Inbox, acked as delivered.
+FirebaseMessaging.onMessage.listen((m) => ialert.didReceivePush(m.data,
+    title: m.notification?.title, body: m.notification?.body));
+
+// A tap on a notification: acked as clicked.
+FirebaseMessaging.onMessageOpenedApp.listen((m) => ialert.didOpenPush(m.data));
+```
+
+Without a native token the device still gets messages while the app runs (Gateway) and on the next launch (Inbox). Showing Inbox messages as local notifications in the background during an internet shutdown needs the native iOS/Android SDKs' background sync and is not part of this package yet.
 
 ## License
 

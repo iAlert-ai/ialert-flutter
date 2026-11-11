@@ -11,7 +11,7 @@ import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.2.0';
+const String sdkVersion = '0.3.0';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
@@ -140,6 +140,24 @@ class IAlert {
   Future<Device> setTags(Map<String, Object?> tags) => update(tags: tags);
 
   Future<Device> setExternalUserId(String? externalUserId) => update(externalUserId: externalUserId);
+
+  /// Hand a native push to the SDK, e.g. from `FirebaseMessaging.onMessage`:
+  /// `ialert.didReceivePush(m.data, title: m.notification?.title, body: m.notification?.body)`.
+  /// Listeners get it once, deduplicated against the Gateway and Inbox, and it is
+  /// acked as delivered. Returns `null` for pushes that are not from iAlert or already seen.
+  Future<IAlertMessage?> didReceivePush(Map<String, dynamic> data, {String? title, String? body, String? image}) async {
+    final message = IAlertMessage.fromPush(data, title: title, body: body, image: image);
+    if (message == null) return null;
+    return await _receive(message) ? message : null;
+  }
+
+  /// Report a tap on an iAlert notification, e.g. from `FirebaseMessaging.onMessageOpenedApp`.
+  Future<void> didOpenPush(Map<String, dynamic> data) async {
+    final message = IAlertMessage.fromPush(data);
+    if (message == null) return;
+    await _receive(message, ack: false);
+    await ack([message.id], AckEvent.clicked);
+  }
 
   /// Join a Live Activity channel so its broadcasts reach this Android device as
   /// FCM data messages (read them with [LiveActivityUpdate.fromData]). Register

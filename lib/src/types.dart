@@ -5,7 +5,7 @@ enum ConnectionState { idle, connecting, ready, closed }
 enum AckEvent { delivered, read, clicked }
 
 /// Where the SDK got a message first.
-enum MessageSource { gateway, inbox }
+enum MessageSource { gateway, inbox, push }
 
 /// A notification as received from the Gateway or the Inbox; [id] is the notification id.
 class IAlertMessage {
@@ -39,6 +39,27 @@ class IAlertMessage {
         createdAt: _str(m['created_at']),
         source: MessageSource.gateway,
       );
+
+  /// An iAlert push as `firebase_messaging` hands it over: FCM data carries
+  /// `ialert_id`; an APNs payload carries an `ialert` object. `null` for other pushes.
+  static IAlertMessage? fromPush(Map<String, dynamic> data, {String? title, String? body, String? image}) {
+    final apns = data['ialert'];
+    final id = data['ialert_id'] ?? (apns is Map ? apns['id'] : null);
+    if (id is! String || id.isEmpty) return null;
+
+    final Map<String, dynamic> payload = apns is Map
+        ? _map(apns['data'])
+        : (Map<String, dynamic>.from(data)..remove('ialert_id'));
+
+    return IAlertMessage(
+      id: id,
+      title: title,
+      body: body,
+      image: image ?? (apns is Map ? _str(apns['image']) : null),
+      data: payload,
+      source: MessageSource.push,
+    );
+  }
 
   factory IAlertMessage.fromInbox(Map<String, dynamic> e) {
     final content = _map(e['content']);
