@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.4.0).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.5.0).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,10 +8,30 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.4.0
+  ialert_flutter: ^0.5.0
 ```
 
-## Usage
+## Quick start
+
+No Firebase or other packages, and no AppDelegate / MainActivity code:
+
+```dart
+import 'package:ialert_flutter/ialert_flutter.dart';
+
+void main() {
+  final ialert = IAlert.init(publicKey: 'ia_pk_...', externalUserId: 'user-42');
+  ialert.messages.listen((m) => print('${m.title}: ${m.body}')); // optional
+  runApp(const MyApp());
+}
+```
+
+`init` asks for notification permission, gets the native push token through the plugin's own native code, registers the device, keeps the Gateway connected, shows iAlert notifications while the app is open, reports taps (and opens `data.url`) and syncs the Inbox.
+
+**iOS** needs two things Apple does not let a package do: the **Push Notifications** capability in Xcode, and the app's APNs key (`.p8`) in the iAlert panel. For delivery during an internet shutdown, also enable **Background Modes → Background fetch** and add `<bundle id>.ialert-sync` under `BGTaskSchedulerPermittedIdentifiers` in Info.plist: the plugin then pulls missed Inbox messages in the background and shows them as local notifications (iOS decides when, so they may be delayed).
+
+**Android:** native push (FCM through iAlert's own Firebase project, nothing to configure) and the background sync are coming in the next release; until then Android devices receive messages over the Gateway while the app runs and from the Inbox on the next launch.
+
+## Usage (manual)
 
 ```dart
 import 'package:ialert_flutter/ialert_flutter.dart';
@@ -73,29 +93,6 @@ are all constructor parameters. See `test/helpers.dart` for fakes.
 ```bash
 flutter analyze && flutter test
 ```
-
-## Native push (notifications while the app is closed)
-
-Use `firebase_messaging` for the native side and give iAlert the token it needs: the **FCM token on Android** and the **APNs token on iOS** (iAlert sends to APNs directly with your `.p8`).
-
-```dart
-final messaging = FirebaseMessaging.instance;
-await messaging.requestPermission();
-
-final token = Platform.isIOS ? await messaging.getAPNSToken() : await messaging.getToken();
-await ialert.register(pushToken: token, externalUserId: 'user-42');
-messaging.onTokenRefresh.listen((_) async => ialert.register(
-    pushToken: Platform.isIOS ? await messaging.getAPNSToken() : await messaging.getToken()));
-
-// While the app is open: deduplicated against the Gateway and Inbox, acked as delivered.
-FirebaseMessaging.onMessage.listen((m) => ialert.didReceivePush(m.data,
-    title: m.notification?.title, body: m.notification?.body));
-
-// A tap on a notification: acked as clicked.
-FirebaseMessaging.onMessageOpenedApp.listen((m) => ialert.didOpenPush(m.data));
-```
-
-Without a native token the device still gets messages while the app runs (Gateway) and on the next launch (Inbox). Showing Inbox messages as local notifications in the background during an internet shutdown needs the native iOS/Android SDKs' background sync and is not part of this package yet.
 
 ## Auth Push (approve a sign-in on the phone)
 

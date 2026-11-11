@@ -7,11 +7,12 @@ import 'package:http/http.dart' as http;
 import 'api.dart';
 import 'errors.dart';
 import 'gateway.dart';
+import 'native_push.dart';
 import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.4.0';
+const String sdkVersion = '0.5.0';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
@@ -32,7 +33,9 @@ class IAlert {
     this.pingInterval = const Duration(seconds: 30),
     this.minReconnect = const Duration(seconds: 1),
     this.maxReconnect = const Duration(seconds: 60),
-  })  : _gatewayUrl = Uri.parse(gatewayUrl),
+  })  : _apiUrl = apiUrl,
+        _publicKey = publicKey,
+        _gatewayUrl = Uri.parse(gatewayUrl),
         _connector = socketConnector ?? webSocketConnector,
         _platform = platform ?? (defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android') {
     if (!publicKey.startsWith('ia_pk_')) {
@@ -47,6 +50,22 @@ class IAlert {
         publicKey.length > 12 ? publicKey.substring(publicKey.length - 12) : publicKey);
   }
 
+  /// One-line setup: asks for notification permission, gets the native push
+  /// token, registers the device, connects to the Gateway, shows iAlert
+  /// notifications in the foreground and reports taps. No Firebase or other
+  /// packages and no AppDelegate code. Await [IAlert.ready] if you need the device.
+  static IAlert init({
+    required String publicKey,
+    String? externalUserId,
+    Map<String, Object?>? tags,
+    bool requestPermission = true,
+  }) =>
+      NativePush.start(IAlert(publicKey: publicKey),
+          externalUserId: externalUserId, tags: tags, requestPermission: requestPermission);
+
+  /// Completes when [init] finished its first registration.
+  Future<Device?> ready = Future.value(null);
+
   /// Connect to the Gateway right after [register].
   final bool autoConnect;
 
@@ -56,7 +75,12 @@ class IAlert {
   final Duration minReconnect;
   final Duration maxReconnect;
 
+  final String _apiUrl;
+  final String _publicKey;
   final Uri _gatewayUrl;
+
+  /// Told about every registration, so native background sync can read the Inbox.
+  void Function(Map<String, String> registration)? onRegistered;
   final SocketConnector _connector;
   final String _platform;
   late final ApiClient _api;
@@ -118,6 +142,12 @@ class IAlert {
     final changed = _registration?.deviceToken != result.deviceToken;
     _registration = (deviceId: result.device.id, deviceToken: result.deviceToken);
     await _store.set('registration', {'deviceId': result.device.id, 'deviceToken': result.deviceToken});
+    onRegistered?.call({
+      'apiUrl': _apiUrl,
+      'publicKey': _publicKey,
+      'deviceId': result.device.id,
+      'deviceToken': result.deviceToken,
+    });
     if (changed) disconnect();
     if (autoConnect) await connect();
     return result.device;
