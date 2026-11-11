@@ -4,6 +4,7 @@
 
 - Now a Flutter plugin with its own native code: `IAlert.init()` sets everything up without `firebase_messaging` or AppDelegate code.
 - iOS: permission, APNs token, foreground display, taps (opens `data.url`) and background Inbox sync as local notifications when `<bundle id>.ialert-sync` is permitted.
+- Custom notification sounds in background-sync notifications on iOS (`none` is silent).
 - Android: native side registered; FCM and background sync follow in the next release.
 
 ## 0.4.0
