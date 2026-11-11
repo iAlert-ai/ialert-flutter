@@ -12,7 +12,7 @@ import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.5.0';
+const String sdkVersion = '0.5.1';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
