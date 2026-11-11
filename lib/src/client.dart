@@ -11,7 +11,7 @@ import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.3.0';
+const String sdkVersion = '0.4.0';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
@@ -140,6 +140,16 @@ class IAlert {
   Future<Device> setTags(Map<String, Object?> tags) => update(tags: tags);
 
   Future<Device> setExternalUserId(String? externalUserId) => update(externalUserId: externalUserId);
+
+  /// Approve or deny an Auth Push sign-in request (see [AuthRequestInfo.of]).
+  /// With number matching pass the number the user typed; a wrong one denies.
+  /// Returns the request status: `approved`, `denied`, `pending` or `expired`.
+  Future<String> respondToAuthRequest(String requestId, {required bool approve, String? code}) async {
+    final r = await _requireRegistration();
+    final result = await _withToken(() => _api.respondToAuthRequest(r.deviceId, r.deviceToken, requestId, approve, code),
+        forgetOnNotFound: false);
+    return '${result['status'] ?? 'pending'}';
+  }
 
   /// Hand a native push to the SDK, e.g. from `FirebaseMessaging.onMessage`:
   /// `ialert.didReceivePush(m.data, title: m.notification?.title, body: m.notification?.body)`.

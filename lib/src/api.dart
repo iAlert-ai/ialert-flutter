@@ -59,6 +59,15 @@ class ApiClient {
         token: token);
   }
 
+  /// Approve or deny an Auth Push request; returns the request as iAlert recorded it.
+  Future<Map<String, dynamic>> respondToAuthRequest(String id, String token, String requestId, bool approve, String? code) async {
+    final r = await _request('POST',
+        '/devices/${Uri.encodeComponent(id)}/auth-requests/${Uri.encodeComponent(requestId)}',
+        body: {'decision': approve ? 'approve' : 'deny', if (code != null) 'code': code}, token: token);
+    final data = r['data'];
+    return data is Map<String, dynamic> ? data : <String, dynamic>{};
+  }
+
   Future<Map<String, dynamic>> _request(String method, String pathOrUrl,
       {Map<String, dynamic>? body, String? token}) async {
     final headers = {

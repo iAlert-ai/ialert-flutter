@@ -288,5 +288,35 @@ void main() {
     final events = api.where('POST', '/inbox/ack').map((r) => r.body!['event']).toList();
     expect(events, containsAll(['delivered', 'clicked']));
   });
+
+  test('auth push: answers with the device token, keeps the registration on unknown ids, reads the request', () async {
+    final a = make(autoConnect: false);
+    await a.register(pushToken: 'fcm-token-1');
+    api.override = (req) => req.url.path.contains('/auth-requests/01AUTH')
+        ? (status: 200, body: {'data': {'id': '01AUTH', 'status': 'approved'}})
+        : null;
+
+    expect(await a.respondToAuthRequest('01AUTH', approve: true, code: '47'), 'approved');
+    final call = api.where('POST', '/auth-requests/01AUTH').single;
+    expect(call.url.path, '/api/v1/devices/dev_1/auth-requests/01AUTH');
+    expect(call.headers['X-Device-Token'], 'ia_dt_test');
+    expect(call.body, {'decision': 'approve', 'code': '47'});
+
+    api.override = (req) => req.url.path.contains('/auth-requests/')
+        ? (status: 404, body: {'message': 'Not found.', 'code': 'not_found'})
+        : null;
+    await expectLater(a.respondToAuthRequest('missing', approve: false), throwsA(isA<IAlertException>()));
+    expect(await a.deviceId, 'dev_1');
+
+    final info = AuthRequestInfo.of(IAlertMessage(
+      id: 'n1',
+      source: MessageSource.push,
+      data: {'ialert_type': 'auth_request', 'auth_request_id': '01AUTH', 'number_matching': '1', 'ip': '5.160.1.2'},
+    ));
+    expect(info?.id, '01AUTH');
+    expect(info?.numberMatching, isTrue);
+    expect(info?.context, {'ip': '5.160.1.2'});
+    expect(AuthRequestInfo.of(const IAlertMessage(id: 'n2', source: MessageSource.push)), isNull);
+  });
 }
 

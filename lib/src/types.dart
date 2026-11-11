@@ -98,3 +98,34 @@ String? _str(Object? v) => v is String ? v : null;
 
 Map<String, dynamic> _map(Object? v) =>
     v is Map ? v.map((k, val) => MapEntry('$k', val)) : <String, dynamic>{};
+
+/// An Auth Push sign-in request carried by a message (`data['ialert_type'] == 'auth_request'`).
+class AuthRequestInfo {
+  const AuthRequestInfo({required this.id, required this.numberMatching, this.expiresAt, this.context = const {}});
+
+  final String id;
+  final bool numberMatching;
+  final String? expiresAt;
+
+  /// Your `context` values (IP, city, device…) to show the user.
+  final Map<String, String> context;
+
+  static const _reserved = {'ialert_type', 'auth_request_id', 'number_matching', 'expires_at'};
+
+  /// The request a message carries, or `null` for other messages.
+  static AuthRequestInfo? of(IAlertMessage message) {
+    final data = message.data;
+    final id = data['auth_request_id'];
+    if (data['ialert_type'] != 'auth_request' || id is! String) return null;
+
+    return AuthRequestInfo(
+      id: id,
+      numberMatching: data['number_matching'] == '1' || data['number_matching'] == true,
+      expiresAt: data['expires_at'] is String ? data['expires_at'] as String : null,
+      context: {
+        for (final entry in data.entries)
+          if (!_reserved.contains(entry.key) && entry.value is String) entry.key: entry.value as String,
+      },
+    );
+  }
+}

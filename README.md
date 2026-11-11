@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.3.0).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.4.0).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,7 +8,7 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.3.0
+  ialert_flutter: ^0.4.0
 ```
 
 ## Usage
@@ -96,6 +96,22 @@ FirebaseMessaging.onMessageOpenedApp.listen((m) => ialert.didOpenPush(m.data));
 ```
 
 Without a native token the device still gets messages while the app runs (Gateway) and on the next launch (Inbox). Showing Inbox messages as local notifications in the background during an internet shutdown needs the native iOS/Android SDKs' background sync and is not part of this package yet.
+
+## Auth Push (approve a sign-in on the phone)
+
+When your server creates an Auth Push request (`POST /v1/auth-requests`), every device of that user gets a high-priority push. Show your own approve/deny screen and answer with the device's token:
+
+```dart
+ialert.messages.listen((message) async {
+  final request = AuthRequestInfo.of(message); // null for other messages
+  if (request == null) return;
+  // show your approve/deny screen with request.context (ip, city, device…)
+  await ialert.respondToAuthRequest(request.id,
+      approve: userApproved, code: request.numberMatching ? typedNumber : null);
+});
+```
+
+With number matching, the user types the two-digit number shown on your sign-in page; a wrong number denies the request. An unknown or expired request throws without clearing the device registration.
 
 ## License
 
