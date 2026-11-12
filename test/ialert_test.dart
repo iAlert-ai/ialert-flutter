@@ -58,6 +58,7 @@ void main() {
     final body = api.where('POST', '/devices').single.body!;
     expect(body['platform'], 'ios');
     expect(body['push_token'], 'apns-token-abc');
+    expect(body['installation_id'], startsWith('ia_flutter_'));
   });
 
   test('update calls send X-Device-Token and validate tag keys', () async {
@@ -318,5 +319,20 @@ void main() {
     expect(info?.context, {'ip': '5.160.1.2'});
     expect(AuthRequestInfo.of(const IAlertMessage(id: 'n2', source: MessageSource.push)), isNull);
   });
-}
 
+  test('the click url comes from the push and falls back to data url', () {
+    final fcm = IAlertMessage.fromPush({'ialert_id': 'n1', 'ialert_url': 'myshop://orders/7', 'order': '7'});
+    final apns = IAlertMessage.fromPush({
+      'ialert': {'id': 'n2', 'url': 'https://shop.test/a', 'data': <String, dynamic>{}},
+    });
+    final legacy = IAlertMessage.fromInbox({
+      'id': 'n3',
+      'content': {'data': {'url': 'https://shop.test/sale'}},
+    });
+
+    expect(fcm!.url, 'myshop://orders/7');
+    expect(fcm.data.containsKey('ialert_url'), isFalse);
+    expect(apns!.url, 'https://shop.test/a');
+    expect(legacy.url, 'https://shop.test/sale');
+  });
+}

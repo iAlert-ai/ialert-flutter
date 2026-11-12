@@ -33,6 +33,7 @@ class IAlertFlutterPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, IAle
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "requestPermission" -> result.success(IAlertBridge.requestPermission())
+            "deviceInfo" -> result.success(mapOf("model" to android.os.Build.MODEL, "osVersion" to android.os.Build.VERSION.RELEASE))
             "getToken" -> {
                 val publicKey = call.argument<String>("publicKey")
                 val apiUrl = call.argument<String>("apiUrl")

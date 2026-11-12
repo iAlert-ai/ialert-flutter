@@ -17,8 +17,15 @@ class NativePush {
     WidgetsFlutterBinding.ensureInitialized();
     String? token;
 
-    Future<Device> register() =>
-        ialert.register(pushToken: token, externalUserId: externalUserId, tags: tags);
+    Map<Object?, Object?>? info;
+
+    Future<Device> register() => ialert.register(
+          pushToken: token,
+          externalUserId: externalUserId,
+          tags: tags,
+          deviceModel: info?['model'] as String?,
+          osVersion: info?['osVersion'] as String?,
+        );
 
     ialert.onRegistered = (registration) {
       unawaited(channel.invokeMethod<void>('setRegistration', registration).catchError((_) {}));
@@ -49,6 +56,13 @@ class NativePush {
     });
 
     ialert.ready = () async {
+      try {
+        info = await channel.invokeMethod<Map<Object?, Object?>>('deviceInfo');
+      } on MissingPluginException {
+        // tests or an unsupported platform
+      } on PlatformException {
+        // older native side
+      }
       try {
         if (requestPermission) await channel.invokeMethod<bool>('requestPermission');
         token = await channel.invokeMethod<String>(

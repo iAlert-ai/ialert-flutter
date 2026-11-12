@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.5.1).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.6.0).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,7 +8,7 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.5.1
+  ialert_flutter: ^0.6.0
 ```
 
 ## Quick start
@@ -25,13 +25,22 @@ void main() {
 }
 ```
 
-`init` asks for notification permission, gets the native push token through the plugin's own native code, registers the device, keeps the Gateway connected, shows iAlert notifications while the app is open, reports taps (and opens `data.url`) and syncs the Inbox.
+`init` asks for notification permission, gets the native push token through the plugin's own native code, registers the device, keeps the Gateway connected, shows iAlert notifications while the app is open, reports taps (and opens the message's `url`) and syncs the Inbox.
 
 **iOS** needs two things Apple does not let a package do: the **Push Notifications** capability in Xcode, and the app's APNs key (`.p8`) in the iAlert panel. For delivery during an internet shutdown, also enable **Background Modes → Background fetch** and add `<bundle id>.ialert-sync` under `BGTaskSchedulerPermittedIdentifiers` in Info.plist: the plugin then pulls missed Inbox messages in the background and shows them as local notifications (iOS decides when, so they may be delayed).
 
 **Custom sound:** put the sound file in the app (iOS: add `order.caf` to the Runner target; Android: `res/raw/order.mp3`) and send with `"sound": "order.caf"`. `"sound": "none"` is silent.
 
-**Android:** nothing to configure in the app. For Android's official push (FCM), upload your Firebase project's service account JSON and its `google-services.json` in the iAlert panel; the plugin (on the iAlert Android SDK) then gets the FCM token with no `google-services.json` or Firebase plugin in the app. Without them, devices get messages over the iAlert Gateway, the Inbox and the background sync. It also brings notifications with images and custom sounds; taps open `data.url`; and a background sync every 15 minutes shows messages that could not be pushed while FCM is unreachable. The app's `minSdk` must be 23 or later.
+**Android:** nothing to configure in the app. For Android's official push (FCM), upload your Firebase project's service account JSON and its `google-services.json` in the iAlert panel; the plugin (on the iAlert Android SDK) then gets the FCM token with no `google-services.json` or Firebase plugin in the app. Without them, devices get messages over the iAlert Gateway, the Inbox and the background sync. It also brings notifications with images and custom sounds; taps open the message's `url`; and a background sync every 15 minutes shows messages that could not be pushed while FCM is unreachable. The app's `minSdk` must be 23 or later.
+
+## Notification links and deep links
+
+Send a notification with `url` (API field or the panel's "Link on click"). On tap the native side
+acks the click and opens it: `https://…` opens the browser (or a verified App Link / Universal
+Link), and a deep link with your app's scheme (`myapp://orders/42`) comes back into your app.
+Register the scheme as usual (Android intent filter, iOS URL Types) and route it with
+your router's deep-link support (for example `go_router`, or `app_links`). `IAlertMessage.url` carries the link for messages you handle in
+`onMessage`; older messages with `data.url` behave the same.
 
 ## Usage (manual)
 

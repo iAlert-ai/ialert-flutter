@@ -61,6 +61,8 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
             }
         case "getToken":
             result(token)
+        case "deviceInfo":
+            result(Self.deviceInfo())
         case "takeInitialOpen":
             result(initialOpen)
             initialOpen = nil
@@ -121,9 +123,31 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
         completionHandler()
     }
 
+    /// Opens the notification's `url` (`data.url` for older messages): a deep link with the
+    /// app's scheme comes back to the app (handled by `Linking`), a web link opens Safari or a Universal Link.
+    /// Hardware identifier (`iPhone16,2`; the simulated one on the Simulator) and iOS version.
+    static func deviceInfo() -> [String: String] {
+        var info = ["osVersion": UIDevice.current.systemVersion]
+        if let simulated = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"], !simulated.isEmpty {
+            info["model"] = simulated
+        } else {
+            var size = 0
+            sysctlbyname("hw.machine", nil, &size, nil, 0)
+            if size > 0 {
+                var machine = [CChar](repeating: 0, count: size)
+                sysctlbyname("hw.machine", &machine, &size, nil, 0)
+                info["model"] = String(cString: machine)
+            }
+        }
+        return info
+    }
+
     private static func openURL(_ userInfo: [AnyHashable: Any]) {
-        let data = (userInfo["ialert"] as? [String: Any])?["data"] as? [String: Any]
-        guard let string = data?["url"] as? String, let url = URL(string: string) else { return }
+        let ialert = userInfo["ialert"] as? [String: Any]
+        let data = ialert?["data"] as? [String: Any]
+        let string = (ialert?["url"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? data?["url"] as? String
+        guard let string, let url = URL(string: string), let scheme = url.scheme?.lowercased(),
+              !["javascript", "file", "data"].contains(scheme) else { return }
         DispatchQueue.main.async { UIApplication.shared.open(url) }
     }
 
@@ -207,6 +231,7 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
             var ialert: [String: Any] = ["id": entryId]
             ialert["data"] = message["data"] as? [String: Any]
             ialert["image"] = message["image"] as? String
+            ialert["url"] = message["url"] as? String
             content.userInfo = ["ialert": ialert]
             try? await center.add(UNNotificationRequest(identifier: "ialert-\(entryId)", content: content, trigger: nil))
             shown.append(entryId)

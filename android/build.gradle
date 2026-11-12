@@ -1,5 +1,5 @@
 group = "ir.ialert.flutter"
-version = "0.5.1"
+version = "0.6.0"
 
 buildscript {
     repositories {
@@ -49,8 +49,8 @@ kotlin {
 
 dependencies {
     if (project.hasProperty("ialertAndroidLocal")) {
-        api("ir.ialert:ialert-android:0.5.1")
+        api("ir.ialert:ialert-android:0.6.0")
     } else {
-        api("com.github.iAlert-ai:ialert-android:v0.5.1")
+        api("com.github.iAlert-ai:ialert-android:v0.6.0")
     }
 }

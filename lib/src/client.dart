@@ -12,7 +12,7 @@ import 'socket.dart';
 import 'storage.dart';
 import 'types.dart';
 
-const String sdkVersion = '0.5.1';
+const String sdkVersion = '0.6.0';
 
 final RegExp _tagKey = RegExp(r'^[A-Za-z0-9_.:-]{1,64}$');
 const int _seenLimit = 500;
@@ -139,6 +139,7 @@ class IAlert {
     final result = await _api.register({
       'platform': _platform,
       'push_token': pushToken ?? await _installationId(),
+      'installation_id': await _installationId(),
       'sdk_version': sdkVersion,
       'timezone': ?timezone ?? _detectTimezone(),
       'os_version': ?osVersion,

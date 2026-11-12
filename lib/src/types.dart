@@ -18,6 +18,7 @@ class IAlertMessage {
     this.data = const {},
     this.collapseId,
     this.createdAt,
+    this.url,
   });
 
   final String id;
@@ -29,6 +30,13 @@ class IAlertMessage {
   final String? createdAt;
   final MessageSource source;
 
+  /// Opened on tap: a web link (`https://…`) or an app deep link (`myapp://orders/42`).
+  /// Falls back to `data['url']` for messages sent before the `url` field.
+  final String? url;
+
+  static String? _clickUrl(Object? url, Map<String, dynamic> data) =>
+      _str(url) ?? _str(data['url']);
+
   factory IAlertMessage.fromGateway(Map<String, dynamic> m) => IAlertMessage(
         id: '${m['id']}',
         title: _str(m['title']),
@@ -38,6 +46,7 @@ class IAlertMessage {
         collapseId: _str(m['collapse_id']),
         createdAt: _str(m['created_at']),
         source: MessageSource.gateway,
+        url: _clickUrl(m['url'], _map(m['data'])),
       );
 
   /// An iAlert push as `firebase_messaging` hands it over: FCM data carries
@@ -49,7 +58,9 @@ class IAlertMessage {
 
     final Map<String, dynamic> payload = apns is Map
         ? _map(apns['data'])
-        : (Map<String, dynamic>.from(data)..remove('ialert_id'));
+        : (Map<String, dynamic>.from(data)
+          ..remove('ialert_id')
+          ..remove('ialert_url'));
 
     return IAlertMessage(
       id: id,
@@ -58,6 +69,7 @@ class IAlertMessage {
       image: image ?? (apns is Map ? _str(apns['image']) : null),
       data: payload,
       source: MessageSource.push,
+      url: _clickUrl(data['ialert_url'] ?? (apns is Map ? apns['url'] : null), payload),
     );
   }
 
@@ -72,6 +84,7 @@ class IAlertMessage {
       collapseId: _str(e['collapse_id']),
       createdAt: _str(e['created_at']),
       source: MessageSource.inbox,
+      url: _clickUrl(content['url'], _map(content['data'])),
     );
   }
 
