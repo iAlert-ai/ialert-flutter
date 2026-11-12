@@ -1,6 +1,6 @@
 name: ialert_flutter
 description: Flutter SDK for iAlert push notifications. Registers the device, keeps a Gateway WebSocket open and syncs the per-device Inbox so messages arrive even when international internet is cut.
-version: 0.6.0
+version: 0.6.1
 homepage: https://ialert.ir
 repository: https://github.com/iAlert-ai/ialert-flutter
 issue_tracker: https://github.com/iAlert-ai/ialert-flutter/issues

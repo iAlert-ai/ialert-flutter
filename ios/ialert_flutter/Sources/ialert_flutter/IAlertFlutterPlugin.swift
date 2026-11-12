@@ -14,7 +14,9 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
 
     private let channel: FlutterMethodChannel
     private weak var previousDelegate: UNUserNotificationCenterDelegate?
-    private var token: String?
+    private static let tokenKey = "ialert.native.apnsToken"
+    /// The last APNs token: it arrives after launch, so a fresh launch registers with it instead of the installation id.
+    private var token: String? = UserDefaults.standard.string(forKey: "ialert.native.apnsToken")
     private var initialOpen: [String: Any]?
 
     init(channel: FlutterMethodChannel) {
@@ -79,6 +81,7 @@ public final class IAlertFlutterPlugin: NSObject, FlutterPlugin, UNUserNotificat
     public func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
         token = hex
+        UserDefaults.standard.set(hex, forKey: Self.tokenKey)
         channel.invokeMethod("onToken", arguments: hex)
     }
 

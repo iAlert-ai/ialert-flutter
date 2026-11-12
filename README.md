@@ -1,6 +1,6 @@
 # iAlert Flutter SDK
 
-Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.6.0).
+Flutter client for [iAlert](https://ialert.ir) push notifications (`ialert_flutter` 0.6.1).
 Messages arrive over iAlert's own Gateway WebSocket and the per-device Inbox, so
 delivery keeps working inside Iran when international internet is cut.
 
@@ -8,7 +8,7 @@ delivery keeps working inside Iran when international internet is cut.
 
 ```yaml
 dependencies:
-  ialert_flutter: ^0.6.0
+  ialert_flutter: ^0.6.1
 ```
 
 ## Quick start
