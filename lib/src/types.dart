@@ -19,6 +19,7 @@ class IAlertMessage {
     this.collapseId,
     this.createdAt,
     this.url,
+    this.sender,
   });
 
   final String id;
@@ -34,6 +35,10 @@ class IAlertMessage {
   /// Falls back to `data['url']` for messages sent before the `url` field.
   final String? url;
 
+  /// Who the message is from: shown as a conversation (the sender's photo and name in place
+  /// of the app icon) on Android, and on iOS through `IAlertNotificationService`.
+  final IAlertSender? sender;
+
   static String? _clickUrl(Object? url, Map<String, dynamic> data) =>
       _str(url) ?? _str(data['url']);
 
@@ -47,6 +52,7 @@ class IAlertMessage {
         createdAt: _str(m['created_at']),
         source: MessageSource.gateway,
         url: _clickUrl(m['url'], _map(m['data'])),
+        sender: IAlertSender.fromJson(m['sender']),
       );
 
   /// An iAlert push as `firebase_messaging` hands it over: FCM data carries
@@ -58,18 +64,24 @@ class IAlertMessage {
 
     final Map<String, dynamic> payload = apns is Map
         ? _map(apns['data'])
-        : (Map<String, dynamic>.from(data)
-          ..remove('ialert_id')
-          ..remove('ialert_url'));
+        : (Map<String, dynamic>.from(data)..removeWhere((key, _) => _pushKeys.contains(key)));
 
     return IAlertMessage(
       id: id,
-      title: title,
-      body: body,
-      image: image ?? (apns is Map ? _str(apns['image']) : null),
+      // Messages with a sender come over FCM as data only, with the content in `ialert_*` keys.
+      title: title ?? _str(data['ialert_title']),
+      body: body ?? _str(data['ialert_body']),
+      image: image ?? _str(data['ialert_image']) ?? (apns is Map ? _str(apns['image']) : null),
       data: payload,
       source: MessageSource.push,
       url: _clickUrl(data['ialert_url'] ?? (apns is Map ? apns['url'] : null), payload),
+      sender: apns is Map
+          ? IAlertSender.fromJson(apns['sender'])
+          : IAlertSender.fromJson({
+              'id': data['ialert_sender_id'],
+              'name': data['ialert_sender_name'],
+              'avatar': data['ialert_sender_avatar'],
+            }),
     );
   }
 
@@ -85,11 +97,36 @@ class IAlertMessage {
       createdAt: _str(e['created_at']),
       source: MessageSource.inbox,
       url: _clickUrl(content['url'], _map(content['data'])),
+      sender: IAlertSender.fromJson(content['sender']),
     );
   }
 
   @override
   String toString() => 'IAlertMessage($id, $title)';
+}
+
+/// The sender of a conversation notification; [id] keeps one sender's messages together and
+/// [avatar] is an HTTPS image.
+class IAlertSender {
+  const IAlertSender({required this.name, this.id, this.avatar});
+
+  final String? id;
+  final String name;
+  final String? avatar;
+
+  static IAlertSender? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final name = _str(json['name']);
+    if (name == null || name.isEmpty) return null;
+    return IAlertSender(name: name, id: _str(json['id']), avatar: _str(json['avatar']));
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is IAlertSender && other.id == id && other.name == name && other.avatar == avatar;
+
+  @override
+  int get hashCode => Object.hash(id, name, avatar);
 }
 
 /// Device as returned by the iAlert API (the push token itself is never returned).
@@ -106,6 +143,9 @@ class Device {
   bool get subscribed => json['subscribed'] == true;
   String? get locale => _str(json['locale']);
 }
+
+/// iAlert's own FCM data keys, not part of the message's custom data.
+const _pushKeys = {'ialert_id', 'ialert_url', 'ialert_sound', 'ialert_title', 'ialert_body', 'ialert_image', 'ialert_sender_id', 'ialert_sender_name', 'ialert_sender_avatar'};
 
 String? _str(Object? v) => v is String ? v : null;
 

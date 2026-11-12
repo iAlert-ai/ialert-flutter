@@ -320,6 +320,33 @@ void main() {
     expect(AuthRequestInfo.of(const IAlertMessage(id: 'n2', source: MessageSource.push)), isNull);
   });
 
+  test('the sender comes from fcm data, the apns payload and the inbox', () {
+    final fcm = IAlertMessage.fromPush({
+      'ialert_id': 'n1',
+      'ialert_title': 'New message',
+      'ialert_body': 'Are you coming?',
+      'ialert_sender_id': 'chat-7',
+      'ialert_sender_name': 'Sara',
+      'ialert_sender_avatar': 'https://img.test/sara.png',
+      'order': '7',
+    });
+    final apns = IAlertMessage.fromPush({
+      'ialert': {'id': 'n2', 'sender': {'name': 'Sara'}},
+    });
+    final inbox = IAlertMessage.fromInbox({
+      'id': 'n3',
+      'content': {'sender': {'id': 'chat-7', 'name': 'Sara'}},
+    });
+
+    expect(fcm!.sender, const IAlertSender(id: 'chat-7', name: 'Sara', avatar: 'https://img.test/sara.png'));
+    expect(fcm.title, 'New message');
+    expect(fcm.body, 'Are you coming?');
+    expect(fcm.data, {'order': '7'});
+    expect(apns!.sender?.name, 'Sara');
+    expect(inbox.sender?.id, 'chat-7');
+    expect(IAlertMessage.fromPush({'ialert_id': 'n4'})!.sender, isNull);
+  });
+
   test('the click url comes from the push and falls back to data url', () {
     final fcm = IAlertMessage.fromPush({'ialert_id': 'n1', 'ialert_url': 'myshop://orders/7', 'order': '7'});
     final apns = IAlertMessage.fromPush({

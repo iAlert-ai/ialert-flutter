@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'ialert_flutter'
-  s.version          = '0.6.1'
+  s.version          = '0.7.0'
   s.summary          = 'iAlert push notifications for Flutter (iOS native side).'
   s.homepage         = 'https://ialert.ir'
   s.license          = { :type => 'Apache-2.0', :file => '../LICENSE' }
