@@ -49,6 +49,9 @@ void main() {
     expect(body['external_user_id'], 'u1');
     expect(body['push_token'], startsWith('ia_flutter_'));
     expect(regs[1].body!['push_token'], body['push_token']);
+    expect(body['device_binding'], isTrue);
+    expect(regs.first.headers['X-Device-Token'], isNull);
+    expect(regs[1].headers['X-Device-Token'], 'ia_dt_test');
     expect(regs.first.headers['Authorization'], 'Bearer ia_pk_test_123456789012');
     expect(await a.deviceId, 'dev_1');
   });

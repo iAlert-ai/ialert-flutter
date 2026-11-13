@@ -141,11 +141,12 @@ class IAlert {
       'push_token': pushToken ?? await _installationId(),
       'installation_id': await _installationId(),
       'sdk_version': sdkVersion,
+      'device_binding': true,
       'timezone': ?timezone ?? _detectTimezone(),
       'os_version': ?osVersion,
       'device_model': ?deviceModel,
       ...fields,
-    });
+    }, deviceToken: _registration?.deviceToken); // proves this install owns the device
     final changed = _registration?.deviceToken != result.deviceToken;
     _registration = (deviceId: result.device.id, deviceToken: result.deviceToken);
     await _store.set('registration', {'deviceId': result.device.id, 'deviceToken': result.deviceToken});

@@ -14,8 +14,8 @@ class ApiClient {
   final String _publicKey;
   final http.Client _http;
 
-  Future<({Device device, String deviceToken})> register(Map<String, dynamic> body) async {
-    final r = await _request('POST', '/devices', body: body);
+  Future<({Device device, String deviceToken})> register(Map<String, dynamic> body, {String? deviceToken}) async {
+    final r = await _request('POST', '/devices', body: body, token: deviceToken);
     return (device: Device(_obj(r['data'])), deviceToken: '${r['device_token']}');
   }
 
